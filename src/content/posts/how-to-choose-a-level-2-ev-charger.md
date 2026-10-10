@@ -65,7 +65,7 @@ Worth paying for: **scheduling** (off-peak rates can halve your charging cost) a
 
 - **Safest default:** [Tesla Universal Wall Connector](amazon:tesla-universal-wall-connector) — any EV, no adapter decisions.
 - **Value:** [EVIQO Gen 2](amazon:eviqo-gen2) — 48 A smart charging for ~$400.
-- **Tight panel:** [Emporia Pro](amazon:emporia-pro/) — 48 A without a panel upgrade.
-- **Simple and tough:** [Grizzl-E Classic](amazon:grizzl-e-classic/) — 40 A, no app, ~$350.
+- **Tight panel:** [Emporia Pro](amazon:emporia-pro) — 48 A without a panel upgrade.
+- **Simple and tough:** [Grizzl-E Classic](amazon:grizzl-e-classic) — 40 A, no app, ~$350.
 
 See the full [2026 ranking](/posts/best-level-2-ev-chargers-2026/) for all 11.

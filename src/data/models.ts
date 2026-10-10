@@ -604,3 +604,6 @@ export const SCORE_LABELS: [keyof ChargerModel["scores"], string][] = [
   ["value", "Value"],
   ["install", "Install flexibility"],
 ];
+
+/** Compatibility alias: template components import `MowerModel`; this site uses `ChargerModel`. */
+export type MowerModel = ChargerModel;
