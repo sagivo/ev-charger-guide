@@ -1,0 +1,137 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { SITE_URL } from "../../lib/site";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import { breadcrumbLd } from "../../lib/schema";
+import { MODELS, CONNECTOR_LABEL } from "../../data/models";
+import { amazonLink } from "../../lib/amazon";
+
+const modelsJson = JSON.stringify(
+  MODELS.map((m) => ({ id: m.id, name: m.shortName, brand: m.brand, maxKw: m.maxKw, maxAmps: m.maxAmps, score: m.score, connector: CONNECTOR_LABEL[m.connector], link: amazonLink(m.query, m.asin) }))
+);
+
+const title = "EV Charge Time Calculator — How Fast Will You Charge?";
+const description =
+  "Free EV charge time calculator: enter your battery size and charger power to see charging time, miles of range per hour, and which Level 2 chargers fit.";
+const url = `${SITE_URL}/tools/charge-time-calculator/`;
+
+const crumbs = [
+  { name: "Home", href: "/" },
+  { name: "Tools", href: "/tools/" },
+  { name: "Charge time calculator", href: "/tools/charge-time-calculator/" },
+];
+const jsonLd = [breadcrumbLd(crumbs), {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "EV Charge Time Calculator",
+  applicationCategory: "UtilitiesApplication",
+  operatingSystem: "Any",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  url,
+}];
+---
+
+<BaseLayout title={title} description={description} canonical={url} jsonLd={jsonLd}>
+  <div class="wrap">
+    <Breadcrumbs crumbs={crumbs} />
+    <div class="calc-hero">
+      <h1>How fast will you actually charge?</h1>
+      <p>
+        Pick your EV's battery size and a charger power level. We'll show the
+        10–80% charge time, miles of range per hour, and which chargers deliver it.
+      </p>
+    </div>
+
+    <div class="calc">
+      <div>
+        <label for="batt">Battery size <output id="batt-out">75 kWh</output></label>
+        <input id="batt" type="range" min="40" max="120" step="5" value="75" />
+      </div>
+      <div>
+        <label for="kw">Charger power <output id="kw-out">11.5 kW (48 A)</output></label>
+        <input id="kw" type="range" min="3.8" max="12" step="0.1" value="11.5" />
+      </div>
+      <div>
+        <label for="eff">Your EV's efficiency <output id="eff-out">3.2 mi/kWh</output></label>
+        <input id="eff" type="range" min="2.4" max="4.2" step="0.1" value="3.2" />
+      </div>
+      <p style="margin-top:1.5rem;"><button class="btn" id="calc-btn" type="button">Calculate charge time ⚡</button></p>
+      <div class="calc-result" id="charge-result" aria-live="polite"></div>
+    </div>
+
+    <article class="prose" data-pagefind-body>
+      <h2>What the numbers mean</h2>
+      <p>
+        A 48-amp (11.5 kW) charger adds roughly 35–44 miles of range per hour —
+        enough to refill a typical day's driving in 1–2 hours overnight. Even a
+        32-amp charger refills most commutes while you sleep. The expensive
+        question isn't speed, it's whether your panel supports the circuit:
+        check with our <a href="/tools/panel-capacity-checker/">panel capacity checker</a>.
+      </p>
+      <p>
+        Note: your EV's onboard charger caps the rate — most EVs accept 11.5 kW
+        or less on AC, so a 50-amp charger won't charge a 7.7-kW-capped car any
+        faster. Our <a href="/posts/best-level-2-ev-chargers-2026/">best chargers of 2026</a>
+        ranking covers which chargers deliver each power level.
+      </p>
+    </article>
+  </div>
+
+  <script define:vars={{ modelsJson }}>
+    const MODELS = JSON.parse(modelsJson);
+    const $ = (id) => document.getElementById(id);
+    const els = ["batt", "kw", "eff"].map($);
+
+    const ampsFor = (kw) => Math.round((kw * 1000) / 240);
+    function paint(el) {
+      const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+      el.style.setProperty("--fill", pct + "%");
+    }
+    function sync() {
+      els.forEach(paint);
+      $("batt-out").textContent = $("batt").value + " kWh";
+      $("kw-out").textContent = (+$("kw").value).toFixed(1) + " kW (" + ampsFor(+$("kw").value) + " A)";
+      $("eff-out").textContent = (+$("eff").value).toFixed(1) + " mi/kWh";
+    }
+    els.forEach((el) => el.addEventListener("input", sync));
+    // Pre-fill from the homepage matcher (?batt=75)
+    const q = new URLSearchParams(location.search).get("batt");
+    if (q && +q >= 40 && +q <= 120) $("batt").value = q;
+    sync();
+
+    const fmtTime = (h) => {
+      if (!isFinite(h)) return "—";
+      const hrs = Math.floor(h), mins = Math.round((h - hrs) * 60);
+      return hrs > 0 ? `${hrs} hr ${mins} min` : `${mins} min`;
+    };
+
+    $("calc-btn").addEventListener("click", () => {
+      const batt = +$("batt").value, kw = +$("kw").value, eff = +$("eff").value;
+      const usable = kw * 0.92; // charging losses
+      const time1080 = (batt * 0.7) / usable;
+      const mph = usable * eff;
+      const amps = ampsFor(kw);
+      const breaker = amps <= 16 ? 20 : amps <= 24 ? 30 : amps <= 32 ? 40 : amps <= 40 ? 50 : 60;
+
+      const fits = MODELS.filter((m) => m.maxKw >= kw - 0.3).sort((a, b) => b.score - a.score).slice(0, 3);
+      const cards = fits.map((m) => `
+        <div class="model-pick">
+          <h4><a href="/chargers/${m.id}/">${m.brand} ${m.name}</a> <span class="score sm">${m.score.toFixed(1)}</span></h4>
+          <p class="specs">${m.maxAmps} A · ${m.maxKw} kW · ${m.connector}</p>
+          <div class="pc-actions"><a class="btn buy btn-sm" href="${m.link}" rel="sponsored nofollow noopener" target="_blank">Check price on Amazon</a><a class="pc-review" href="/chargers/${m.id}/">Full review</a></div>
+        </div>`).join("");
+
+      $("charge-result").innerHTML = `
+        <h3>Your result</h3>
+        <table class="compat-table">
+          <tr><td>10–80% charge time</td><td><strong>${fmtTime(time1080)}</strong></td></tr>
+          <tr><td>Miles of range per hour</td><td><strong>~${Math.round(mph)}</strong></td></tr>
+          <tr><td>Circuit needed</td><td><strong>${breaker}-amp breaker</strong> <span style="color:#5c6f60;font-size:.85rem;">(continuous load = 80% of breaker)</span></td></tr>
+        </table>
+        <h3 style="margin-top:1.5rem;">Chargers that deliver this power</h3>${cards}
+        <p class="fine">As an Amazon Associate we earn from qualifying purchases. Times assume a warm battery and no taper — real sessions vary.</p>`;
+      $("charge-result").classList.add("show");
+      $("charge-result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  </script>
+</BaseLayout>

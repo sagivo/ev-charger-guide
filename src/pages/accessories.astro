@@ -1,0 +1,74 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import { ACCESSORIES, KIND_LABEL, type AccessoryKind } from "../data/accessories";
+import { AFFILIATE_REL, amazonLink } from "../lib/amazon";
+import { SITE_URL } from "../lib/site";
+import { breadcrumbLd, type Crumb } from "../lib/schema";
+
+const crumbs: Crumb[] = [
+  { name: "Home", href: "/" },
+  { name: "Accessories", href: "/accessories/" },
+];
+const SECTIONS: { kinds: AccessoryKind[]; title: string; blurb: string }[] = [
+  { kinds: ["outlet"], title: "NEMA 14-50 outlets", blurb: "The single most important accessory for a plug-in install. Industrial-grade outlets (Hubbell, Bryant) with solid brass contacts won't overheat under a continuous 40-amp load. Cheap dryer outlets can — this is not the part to economize on." },
+  { kinds: ["adapter"], title: "J1772 / NACS adapters", blurb: "Bridge the connector gap for mixed-EV households: J1772-to-NACS for Teslas charging on J1772 stations, NACS-to-J1772 for older EVs on NACS chargers." },
+  { kinds: ["holster"], title: "Cable holsters & organizers", blurb: "Keep the charge handle and coiled cable off the garage floor and out of the weather." },
+  { kinds: ["pedestal"], title: "Pedestal mounts", blurb: "Floor-standing posts for chargers when there's no wall near the parking spot — common for driveway installs." },
+  { kinds: ["other"], title: "Outdoor protection", blurb: "Weatherproof covers for outdoor receptacles, required by code in many areas." },
+];
+const jsonLd = [
+  breadcrumbLd(crumbs),
+  {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "EV charger accessories",
+    url: `${SITE_URL}/accessories/`,
+  },
+];
+---
+
+<BaseLayout
+  title="EV Charger Accessories: Outlets, Adapters, Holsters & Mounts"
+  description={`${ACCESSORIES.length} EV charger accessories: industrial-grade NEMA 14-50 outlets, J1772/NACS adapters, cable holsters, pedestal mounts and outdoor boxes.`}
+  canonical={`${SITE_URL}/accessories/`}
+  jsonLd={jsonLd}
+>
+  <div class="wrap wide">
+    <Breadcrumbs crumbs={crumbs} />
+    <div class="calc-hero" data-pagefind-body>
+      <h1>EV charger accessories</h1>
+      <p>The extras that make or break an install: industrial-grade outlets, connector adapters, cable management and mounts — all sold on Amazon.</p>
+    </div>
+    {SECTIONS.map((sec) => {
+      const items = ACCESSORIES.filter((a) => sec.kinds.includes(a.kind)).sort((a, b) => Number(b.oem) - Number(a.oem) || a.price - b.price);
+      return (
+        <section class="acc-section">
+          <div class="section-head">
+            <h2 class="section-title">{sec.title}</h2>
+          </div>
+          <p class="acc-intro">{sec.blurb}</p>
+          <ul class="acc-list">
+            {items.map((a) => (
+              <li class="acc-row">
+                <span class="acc-kind">{KIND_LABEL[a.kind]}</span>
+                <div class="acc-main">
+                  <strong>{a.name}</strong>
+                  <span class="acc-tag">{a.oem ? `Official ${a.brand}` : "Universal fit"}</span>
+                  <p>
+                    {a.why}
+                    {a.fitNote && ` ${a.fitNote}`}
+                  </p>
+                </div>
+                <div class="acc-buy">
+                  <a class="btn buy btn-xs" href={amazonLink(a.name, a.asin)} rel={AFFILIATE_REL} target="_blank">Check price</a>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      );
+    })}
+    <p class="fine">Prices checked October 2026. "Compatible" claims come from the sellers; confirm your exact charger and connector on the listing.</p>
+  </div>
+</BaseLayout>

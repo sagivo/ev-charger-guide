@@ -1,0 +1,43 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import { SITE_URL } from "../../lib/site";
+import { breadcrumbLd, type Crumb } from "../../lib/schema";
+
+const crumbs: Crumb[] = [
+  { name: "Home", href: "/" },
+  { name: "Tools", href: "/tools/" },
+];
+const tools = [
+  { href: "/tools/charge-time-calculator/", icon: "⚡", name: "Charge Time Calculator", text: "Enter your battery size and charger power. Get charge times, miles of range per hour, and matching chargers.", go: "Calculate charge time" },
+  { href: "/tools/panel-capacity-checker/", icon: "🔌", name: "Panel Capacity Checker", text: "See if your electrical panel can handle a 40A or 48A charger — or whether load management beats a panel upgrade.", go: "Check my panel" },
+  { href: "/tools/ev-vs-gas-cost/", icon: "💰", name: "EV vs Gas Cost Calculator", text: "Compare a year of gasoline against a year of home charging at your electricity rate.", go: "Do the math" },
+  { href: "/chargers/", icon: "📊", name: "Comparison Chart", text: "Every charger side by side: amperage, power, cable, connector, install and price. Sortable.", go: "Compare chargers" },
+  { href: "/accessories/", icon: "🧰", name: "Accessories Finder", text: "NEMA 14-50 outlets, J1772/NACS adapters, cable holsters and pedestal mounts.", go: "Find accessories" },
+];
+---
+
+<BaseLayout
+  title="Free EV Charger Calculators & Tools"
+  description="Free EV charger tools: charge time calculator, panel capacity checker, EV vs gas cost calculator and a sortable comparison chart of every Level 2 charger."
+  canonical={`${SITE_URL}/tools/`}
+  jsonLd={breadcrumbLd(crumbs)}
+>
+  <div class="wrap wide">
+    <Breadcrumbs crumbs={crumbs} />
+    <div class="calc-hero">
+      <h1>Free EV charger tools</h1>
+      <p>Turn "which charger should I buy?" into numbers. Every tool runs in your browser, and nothing you enter leaves your device.</p>
+    </div>
+    <div class="tool-grid">
+      {tools.map((t) => (
+        <a class="tool-card" href={t.href}>
+          <div class="tool-icon">{t.icon}</div>
+          <h2 class="h3">{t.name}</h2>
+          <p>{t.text}</p>
+          <span class="go">{t.go}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</BaseLayout>

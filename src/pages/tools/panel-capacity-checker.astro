@@ -1,0 +1,133 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { SITE_URL } from "../../lib/site";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import { breadcrumbLd } from "../../lib/schema";
+
+const title = "Panel Capacity Checker — Can Your Panel Handle an EV Charger?";
+const description =
+  "Free panel capacity checker: enter your panel size and major loads to see if a 40A or 48A EV charger fits — or whether you need load management instead of a panel upgrade.";
+const url = `${SITE_URL}/tools/panel-capacity-checker/`;
+
+const crumbs = [
+  { name: "Home", href: "/" },
+  { name: "Tools", href: "/tools/" },
+  { name: "Panel capacity checker", href: "/tools/panel-capacity-checker/" },
+];
+const jsonLd = [breadcrumbLd(crumbs), {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "EV Panel Capacity Checker",
+  applicationCategory: "UtilitiesApplication",
+  operatingSystem: "Any",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  url,
+}];
+
+const LOADS = [
+  { id: "hvac", name: "Central AC / heat pump", amps: 30 },
+  { id: "dryer", name: "Electric dryer", amps: 30 },
+  { id: "oven", name: "Electric range / oven", amps: 40 },
+  { id: "water", name: "Electric water heater", amps: 25 },
+  { id: "pool", name: "Pool / hot tub", amps: 40 },
+];
+---
+
+<BaseLayout title={title} description={description} canonical={url} jsonLd={jsonLd}>
+  <div class="wrap">
+    <Breadcrumbs crumbs={crumbs} />
+    <div class="calc-hero">
+      <h1>Can your panel handle an EV charger?</h1>
+      <p>
+        A rough NEC-style estimate. Pick your panel size, check your big loads,
+        and see whether a 40 A or 48 A charger fits — or whether load management
+        beats a panel upgrade.
+      </p>
+    </div>
+
+    <div class="calc">
+      <div>
+        <label for="panel">Main panel size <output id="panel-out">200 A</output></label>
+        <input id="panel" type="range" min="100" max="400" step="25" value="200" />
+      </div>
+      <fieldset style="margin-top:1rem;">
+        <legend style="font-weight:700;margin-bottom:.5rem;">Major existing loads (check all that apply)</legend>
+        <div class="mq-opts">
+          {LOADS.map((l) => (
+            <label><input type="checkbox" data-amps={l.amps} checked={["hvac","dryer","oven"].includes(l.id)} /><span>{l.name} (~{l.amps} A)</span></label>
+          ))}
+        </div>
+      </fieldset>
+      <div style="margin-top:1rem;">
+        <label for="charger">Charger you want <output id="charger-out">48 A (60 A breaker)</output></label>
+        <input id="charger" type="range" min="16" max="50" step="2" value="48" />
+      </div>
+      <p style="margin-top:1.5rem;"><button class="btn" id="calc-btn" type="button">Check my panel ⚡</button></p>
+      <div class="calc-result" id="panel-result" aria-live="polite"></div>
+    </div>
+
+    <article class="prose" data-pagefind-body>
+      <h2>This is an estimate, not an electrician</h2>
+      <p>
+        Real load calculations follow NEC Article 220 and account for demand
+        factors, square footage, and which loads run simultaneously. This tool
+        uses a conservative simplification. <strong>Always have a licensed
+        electrician do the official load calculation before buying</strong> —
+        but this tells you which conversation you're walking into.
+      </p>
+      <p>
+        If the numbers don't fit, you have two outs before a $1,500–$3,000 panel
+        upgrade: a lower-amperage charger (40 A is plenty overnight), or a
+        charger with dynamic load management like the
+        <a href="/chargers/emporia-pro/">Emporia Pro</a>, which charges at full
+        speed only when the house has headroom.
+      </p>
+    </article>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const panel = $("panel"), charger = $("charger");
+    const paint = (el) => {
+      const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+      el.style.setProperty("--fill", pct + "%");
+    };
+    const breakerFor = (a) => (a <= 16 ? 20 : a <= 24 ? 30 : a <= 32 ? 40 : a <= 40 ? 50 : 60);
+    const sync = () => {
+      [panel, charger].forEach(paint);
+      $("panel-out").textContent = panel.value + " A";
+      $("charger-out").textContent = charger.value + " A (" + breakerFor(+charger.value) + " A breaker)";
+    };
+    [panel, charger].forEach((el) => el.addEventListener("input", sync));
+    document.querySelectorAll('input[type="checkbox"]').forEach((c) => c.addEventListener("change", sync));
+    sync();
+
+    $("calc-btn").addEventListener("click", () => {
+      const panelA = +panel.value, chargerA = +charger.value;
+      const breaker = breakerFor(chargerA);
+      let loadA = 0;
+      document.querySelectorAll('input[type="checkbox"]:checked').forEach((c) => { loadA += +(c.dataset.amps || 0); });
+      // Conservative: general loads + 25% headroom, charger at breaker size
+      const total = loadA * 1.0 + 30 + breaker; // 30 A general lighting/receptacle allowance
+      const headroom = panelA - total;
+      const ok = headroom >= 0;
+      const tight = !ok && headroom > -40;
+      $("panel-result").innerHTML = `
+        <h3>Your result</h3>
+        <table class="compat-table">
+          <tr><td>Panel capacity</td><td><strong>${panelA} A</strong></td></tr>
+          <tr><td>Estimated existing load</td><td><strong>~${Math.round(loadA + 30)} A</strong> <span style="color:#5c6f60;font-size:.85rem;">(major loads + general allowance)</span></td></tr>
+          <tr><td>Charger circuit</td><td><strong>${breaker} A breaker</strong> for ${chargerA} A charging</td></tr>
+          <tr><td>Headroom</td><td><strong style="color:${ok ? "#1e6b32" : "#b3402a"};font-size:1.2rem;">${headroom >= 0 ? "+" : ""}${Math.round(headroom)} A</strong></td></tr>
+        </table>
+        ${ok
+          ? `<p><strong>Looks feasible.</strong> A ${chargerA}-amp charger likely fits your panel. Confirm with an electrician's official load calculation before buying.</p>`
+          : tight
+            ? `<p><strong>Tight, but you have options.</strong> Drop to a 32–40 A charger, or get the <a href="/chargers/emporia-pro/">Emporia Pro</a> — its dynamic load management can deliver 48 A without a panel upgrade.</p>`
+            : `<p><strong>Probably needs work.</strong> This charger likely doesn't fit as-is. Options: a smaller charger, <a href="/chargers/emporia-pro/">load management</a>, or a panel upgrade ($1,500–$3,000). Get an electrician's load calculation.</p>`}
+        <p class="fine">Rough estimate only — not a substitute for a licensed electrician's NEC Article 220 calculation.</p>`;
+      $("panel-result").classList.add("show");
+      $("panel-result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  </script>
+</BaseLayout>

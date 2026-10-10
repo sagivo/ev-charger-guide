@@ -1,0 +1,82 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import ComparisonTable from "../../components/ComparisonTable.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import Visual from "../../components/Visual.astro";
+import { MODELS } from "../../data/models";
+import { SITE_URL } from "../../lib/site";
+import { breadcrumbLd, itemListLd, faqLd, type Crumb } from "../../lib/schema";
+
+const byScore = [...MODELS].sort((a, b) => b.score - a.score);
+const url = `${SITE_URL}/chargers/`;
+const crumbs: Crumb[] = [
+  { name: "Home", href: "/" },
+  { name: "Compare chargers", href: "/chargers/" },
+];
+const faq = [
+  {
+    q: "Which Level 2 EV charger has the best specs in 2026?",
+    a: `By our research-based score, the ${byScore[0].name} currently ranks highest (${byScore[0].score}/10). The best charger for you depends on your panel capacity, connector needs, and install type — sort the table by the spec that matters most for your garage.`,
+  },
+  {
+    q: "What do the amps and kW ratings mean?",
+    a: "Amps × 240 volts = watts. A 48-amp charger delivers 11.5 kW, adding roughly 35–44 miles of range per hour. A 40-amp charger delivers 9.6 kW (~30 miles/hour). Your EV's onboard charger caps the actual rate.",
+  },
+  {
+    q: "NACS or J1772 — which connector should I choose?",
+    a: "NACS for Teslas and 2025+ EVs (native NACS ports); J1772 for older non-Tesla EVs. Dual-connector chargers like the Tesla Universal Wall Connector handle both. See our NACS vs J1772 explainer.",
+  },
+];
+const jsonLd = [breadcrumbLd(crumbs), itemListLd("Level 2 EV home chargers compared", byScore), faqLd(faq)];
+
+const brands = [...new Set(MODELS.map((m) => m.brand))].sort();
+---
+
+<BaseLayout
+  title="Level 2 EV Charger Comparison Chart (2026): Every Home Charger"
+  description={`Compare ${MODELS.length} Level 2 EV home chargers side by side: amperage, power, cable length, connector (NACS/J1772), install type, price and our score. Sortable chart.`}
+  canonical={url}
+  jsonLd={jsonLd}
+>
+  <div class="wrap wide">
+    <Breadcrumbs crumbs={crumbs} />
+    <div class="calc-hero" data-pagefind-body>
+      <h1>Level 2 EV charger comparison chart</h1>
+      <p>
+        Every charger we track, side by side. Click any column to sort by it.
+        Covers {MODELS.length} chargers from {brands.join(", ")}.
+      </p>
+    </div>
+
+    <ComparisonTable models={byScore} sortable caption="Level 2 EV chargers, sorted by Guide score (click headers to re-sort)" />
+    <p class="fine">Amperage and power are manufacturer ratings at 240 V. Prices are typical US street prices as of October 2026 and change often.</p>
+
+    <div class="section-head"><h2 class="section-title">Power and value at a glance</h2></div>
+    <div class="viz-pair">
+      <Visual name="chart:power" />
+      <Visual name="chart:value" />
+    </div>
+
+    <div class="section-head"><h2 class="section-title">Highest-rated chargers</h2></div>
+    <div class="tp-grid">
+      {byScore.slice(0, 6).map((m, i) => <ProductCard model={m} rank={i + 1} label="Top rated" />)}
+    </div>
+
+    <div class="prose" style="margin-top:3rem;">
+      <h2>How to read this chart</h2>
+      <p>
+        <strong>Max amps / kW</strong> is the rated output at 240 V. 48 A / 11.5 kW is the sweet spot;
+        40 A / 9.6 kW is plenty for overnight charging. Our <a href="/tools/charge-time-calculator/">charge time calculator</a>
+        turns these into hours for your battery. <strong>Connector</strong> tells you which plug it ships with —
+        NACS, J1772, or both. <strong>Install</strong> tells you whether it hardwires, plugs into a NEMA 14-50,
+        or both. Our <a href="/posts/nacs-vs-j1772-explained/">NACS vs J1772 explainer</a> and
+        <a href="/posts/hardwired-vs-plug-in-ev-charger/">hardwired vs plug-in guide</a> cover the trade-offs.
+      </p>
+      <section class="faq" aria-label="FAQ">
+        <h2>FAQ</h2>
+        {faq.map((f) => <details><summary>{f.q}</summary><div>{f.a}</div></details>)}
+      </section>
+    </div>
+  </div>
+</BaseLayout>

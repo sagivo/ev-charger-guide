@@ -1,0 +1,120 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { SITE_URL } from "../../lib/site";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import { breadcrumbLd } from "../../lib/schema";
+
+const title = "EV vs Gas Cost Calculator — Home Charging Savings";
+const description =
+  "Free EV vs gas calculator: compare your yearly fuel cost charging an EV at home vs. gasoline. Enter your miles, gas price, and electricity rate.";
+const url = `${SITE_URL}/tools/ev-vs-gas-cost/`;
+
+const crumbs = [
+  { name: "Home", href: "/" },
+  { name: "Tools", href: "/tools/" },
+  { name: "EV vs gas cost", href: "/tools/ev-vs-gas-cost/" },
+];
+const jsonLd = [breadcrumbLd(crumbs), {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "EV vs Gas Cost Calculator",
+  applicationCategory: "UtilitiesApplication",
+  operatingSystem: "Any",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  url,
+}];
+---
+
+<BaseLayout title={title} description={description} canonical={url} jsonLd={jsonLd}>
+  <div class="wrap">
+    <Breadcrumbs crumbs={crumbs} />
+    <div class="calc-hero">
+      <h1>What does home charging actually save you?</h1>
+      <p>
+        Compare a year of gasoline against a year of home charging. Most drivers
+        cut their "fuel" bill by two-thirds or more.
+      </p>
+    </div>
+
+    <div class="calc">
+      <div class="row">
+        <div>
+          <label for="miles">Miles driven / year <output id="miles-out">12,000</output></label>
+          <input id="miles" type="range" min="3000" max="30000" step="500" value="12000" />
+        </div>
+        <div>
+          <label for="gas-price">Gas price <output id="gas-price-out">$3.20/gal</output></label>
+          <input id="gas-price" type="range" min="2" max="6" step="0.05" value="3.2" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="mpg">Gas car MPG <output id="mpg-out">28 mpg</output></label>
+          <input id="mpg" type="range" min="15" max="50" step="1" value="28" />
+        </div>
+        <div>
+          <label for="kwh-price">Electricity rate <output id="kwh-price-out">$0.16/kWh</output></label>
+          <input id="kwh-price" type="range" min="0.06" max="0.45" step="0.01" value="0.16" />
+        </div>
+      </div>
+      <div>
+        <label for="eff">EV efficiency <output id="eff-out">3.2 mi/kWh</output></label>
+        <input id="eff" type="range" min="2.4" max="4.2" step="0.1" value="3.2" />
+      </div>
+      <p style="margin-top:1.5rem;"><button class="btn" id="calc-btn" type="button">Compare costs ⛽⚡</button></p>
+      <div class="calc-result" id="evgas-result" aria-live="polite"></div>
+    </div>
+
+    <article class="prose" data-pagefind-body>
+      <h2>Why home charging wins</h2>
+      <p>
+        At $0.16/kWh and 3.2 mi/kWh, an EV "gallon equivalent" costs about $1.60 —
+        half the price of gasoline, before off-peak rates. Many utilities offer
+        Time-of-Use plans at $0.08–$0.12/kWh overnight, which is exactly when a
+        <a href="/posts/best-level-2-ev-chargers-2026/">Level 2 charger with scheduling</a>
+        does its work. That's the quiet math behind every charger on this site:
+        the charger pays for itself in fuel savings, usually within the first year.
+      </p>
+    </article>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const els = ["miles", "gas-price", "mpg", "kwh-price", "eff"].map($);
+    const paint = (el) => {
+      const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+      el.style.setProperty("--fill", pct + "%");
+    };
+    const fmt = (n) => "$" + Math.round(n).toLocaleString("en-US");
+    const sync = () => {
+      els.forEach(paint);
+      $("miles-out").textContent = (+$("miles").value).toLocaleString("en-US");
+      $("gas-price-out").textContent = "$" + (+$("gas-price").value).toFixed(2) + "/gal";
+      $("mpg-out").textContent = $("mpg").value + " mpg";
+      $("kwh-price-out").textContent = "$" + (+$("kwh-price").value).toFixed(2) + "/kWh";
+      $("eff-out").textContent = (+$("eff").value).toFixed(1) + " mi/kWh";
+    };
+    els.forEach((el) => el.addEventListener("input", sync));
+    sync();
+
+    $("calc-btn").addEventListener("click", () => {
+      const miles = +$("miles").value, gasP = +$("gas-price").value, mpg = +$("mpg").value;
+      const kwhP = +$("kwh-price").value, eff = +$("eff").value;
+      const gasCost = (miles / mpg) * gasP;
+      const evCost = (miles / eff) * kwhP;
+      const save = Math.max(0, gasCost - evCost);
+      const pct = gasCost > 0 ? Math.round((save / gasCost) * 100) : 0;
+      $("evgas-result").innerHTML = `
+        <h3>Your result</h3>
+        <table class="compat-table">
+          <tr><td>Yearly gasoline cost</td><td><strong>${fmt(gasCost)}</strong></td></tr>
+          <tr><td>Yearly home-charging cost</td><td><strong>${fmt(evCost)}</strong></td></tr>
+          <tr><td>You save per year</td><td><strong style="color:#1e6b32;font-size:1.3rem;">${fmt(save)}</strong> <span style="font-size:.9rem;">(${pct}% less)</span></td></tr>
+          <tr><td>5-year savings</td><td><strong>${fmt(save * 5)}</strong></td></tr>
+        </table>
+        <p style="font-size:.87rem;color:#5c6f60;">A $500 Level 2 charger typically pays for itself in fuel savings within the first year at these numbers.</p>`;
+      $("evgas-result").classList.add("show");
+      $("evgas-result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  </script>
+</BaseLayout>
