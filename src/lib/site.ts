@@ -1,7 +1,7 @@
-// Central site config. Domain: ev-charger-guide.pages.dev
+// Central site config. Domain: ev-charger-guide-aif.pages.dev (Cloudflare-assigned; plain subdomain was taken)
 // (also update `SITE` in astro.config.mjs and public/robots.txt).
 export const SITE_NAME = "EV Charger Guide";
-export const SITE_URL = "https://ev-charger-guide.pages.dev";
+export const SITE_URL = "https://ev-charger-guide-aif.pages.dev";
 export const SITE_TAGLINE = "Level 2 EV home charger guides, comparisons, and calculators.";
 export const SITE_DESCRIPTION =
   "Independent guides to Level 2 EV home chargers: charger comparisons, charge-time calculators, NACS vs J1772 explainers, and installation cost breakdowns so you buy the right charger the first time.";
